@@ -1,0 +1,9 @@
+{
+  "name": "gemini-chatbot-frontend",
+  "version": "1.0.0",
+  "description": "Frontend UI for Gemini Chatbot",
+  "scripts": {
+    "dev": "npx -y serve . -p 3000",
+    "start": "npx -y serve . -p 3000"
+  }
+}

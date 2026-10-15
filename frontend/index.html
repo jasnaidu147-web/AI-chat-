@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Next-Generation Gemini LLM Chatbot with multi-turn chat, Supabase cloud sync, markdown formatting, syntax highlighting, and customizable AI personas.">
+  <meta name="theme-color" content="#0d0f17">
+  <title>Gemini AI Studio — Intelligent Conversational Bot</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Highlight.js for Code Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <!-- Marked for Markdown Parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+
+  <!-- Supabase Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Dynamic /env.js to load frontend/.env variables into window.__ENV__ -->
+  <script src="/env.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-layout" id="appLayout">
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <!-- App Brand -->
+      <div class="brand-header">
+        <div class="brand-logo-wrap">
+          <img src="assets/bot-avatar.jpg" alt="Gemini Orb Logo" class="brand-avatar" id="brandAvatar">
+          <span class="status-indicator-dot online" title="Status: Online"></span>
+        </div>
+        <div class="brand-info">
+          <h1 class="brand-title">Gemini AI</h1>
+          <span class="brand-badge" id="currentModelBadge">gemini-3.8-flash</span>
+        </div>
+        <button class="icon-btn close-sidebar-btn" id="closeSidebarBtn" aria-label="Close sidebar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- New Chat Action -->
+      <div class="sidebar-action-wrap">
+        <button class="new-chat-btn" id="newChatBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>New Conversation</span>
+          <kbd class="shortcut-tag">Ctrl K</kbd>
+        </button>
+      </div>
+
+      <!-- Persona Selector Section -->
+      <div class="sidebar-section">
+        <div class="section-title">
+          <span>AI PERSONA</span>
+        </div>
+        <div class="persona-chips" id="personaChips">
+          <button class="persona-chip active" data-persona="general">
+            <span class="chip-icon">🤖</span>
+            <div class="chip-text">
+              <span class="chip-name">General Assistant</span>
+              <span class="chip-desc">Helpful, smart & friendly</span>
+            </div>
+          </button>
+          <button class="persona-chip" data-persona="coder">
+            <span class="chip-icon">💻</span>
+            <div class="chip-text">
+              <span class="chip-name">Code Architect</span>
+              <span class="chip-desc">Fullstack engineering expert</span>
+            </div>
+          </button>
+          <button class="persona-chip" data-persona="writer">
+            <span class="chip-icon">🎨</span>
+            <div class="chip-text">
+              <span class="chip-name">Creative Writer</span>
+              <span class="chip-desc">Engaging & expressive prose</span>
+            </div>
+          </button>
+          <button class="persona-chip" data-persona="analyst">
+            <span class="chip-icon">🧠</span>
+            <div class="chip-text">
+              <span class="chip-name">Deep Analyst</span>
+              <span class="chip-desc">Rigorous critical reasoning</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat History -->
+      <div class="sidebar-section history-section">
+        <div class="section-title">
+          <span>RECENT CHATS</span>
+          <button class="text-btn" id="clearAllHistoryBtn" title="Clear all chat history">Clear All</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <!-- Dynamic conversation list items injected here -->
+        </div>
+      </div>
+
+      <!-- Sidebar Footer / Status -->
+      <div class="sidebar-footer">
+        <div class="api-status-widget" id="apiStatusWidget">
+          <div class="status-pill-row">
+            <div class="status-indicator">
+              <span class="indicator-glow" id="statusGlow"></span>
+              <span class="status-label" id="statusLabel">Checking API...</span>
+            </div>
+            <button class="settings-pill-btn" id="openSettingsBtn" title="Configure API Key and Model">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Settings</span>
+            </button>
+          </div>
+
+          <!-- Supabase Cloud Sync Status Row -->
+          <div class="supabase-status-row" id="supabaseStatusRow" title="Supabase Database Status">
+            <div class="supabase-status-pill">
+              <span class="supabase-dot" id="supabaseGlow"></span>
+              <span class="supabase-text" id="supabaseLabel">Supabase: Offline (Local Storage)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat Container -->
+    <main class="chat-main" id="chatMain">
+      <!-- Chat Header -->
+      <header class="chat-topbar" id="chatTopbar">
+        <div class="topbar-left">
+          <button class="icon-btn mobile-menu-btn" id="mobileMenuBtn" aria-label="Open sidebar menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="session-meta">
+            <h2 class="session-title" id="sessionTitle">New Conversation</h2>
+            <div class="session-tags">
+              <span class="meta-tag model-tag" id="topbarModelTag">Gemini 3.8 Flash</span>
+              <span class="meta-tag persona-tag" id="topbarPersonaTag">General Assistant</span>
+              <span class="meta-tag streaming-tag" id="topbarStreamTag">⚡ Live Stream</span>
+              <span class="meta-tag supabase-tag" id="topbarSupabaseTag">☁️ Supabase Ready</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="topbar-btn" id="ttsToggleBtn" title="Toggle Auto Read-Aloud (Speech)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="ttsIcon"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            <span class="btn-text">Voice</span>
+          </button>
+          <button class="topbar-btn" id="exportChatBtn" title="Export conversation as Markdown">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span class="btn-text">Export</span>
+          </button>
+          <button class="topbar-btn danger-hover" id="clearChatBtn" title="Clear messages in current chat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Message History Container -->
+      <div class="chat-viewport" id="chatViewport">
+        <!-- Hero Welcome View (Visible on empty chat) -->
+        <div class="welcome-hero" id="welcomeHero">
+          <div class="hero-orb-wrap">
+            <div class="hero-orb-glow"></div>
+            <img src="assets/bot-avatar.jpg" alt="Gemini Neural Core" class="hero-orb-img">
+          </div>
+          <h3 class="hero-title">Experience Google Gemini Intelligence</h3>
+          <p class="hero-subtitle">
+            Powered by modern Gemini LLM with streaming responses, Supabase database persistence, multi-turn reasoning, and code generation.
+          </p>
+
+          <!-- Prompt Starter Cards -->
+          <div class="prompt-grid">
+            <button class="prompt-card" data-prompt="Explain quantum computing in simple terms with a real-world analogy.">
+              <span class="card-icon">⚛️</span>
+              <div class="card-content">
+                <strong>Explain Quantum Computing</strong>
+                <span>Clear analogies for everyday understanding</span>
+              </div>
+            </button>
+
+            <button class="prompt-card" data-prompt="Write an Express.js REST API with JWT authentication and clean middleware.">
+              <span class="card-icon">⚡</span>
+              <div class="card-content">
+                <strong>Write Express REST API</strong>
+                <span>Clean middleware, error handling & JWT</span>
+              </div>
+            </button>
+
+            <button class="prompt-card" data-prompt="Design a modern, high-contrast Dark Mode color palette using HSL variables.">
+              <span class="card-icon">🎨</span>
+              <div class="card-content">
+                <strong>Design System Color Tokens</strong>
+                <span>Sleek HSL palettes and glassmorphism</span>
+              </div>
+            </button>
+
+            <button class="prompt-card" data-prompt="Compare microservices vs monolithic architecture: pros, cons, and when to migrate.">
+              <span class="card-icon">🏗️</span>
+              <div class="card-content">
+                <strong>System Architecture Trade-offs</strong>
+                <span>Microservices vs Modular Monolith analysis</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Chat Messages Container -->
+        <div class="messages-container" id="messagesContainer">
+          <!-- Dynamic chat bubbles will be rendered here -->
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator-row hidden" id="typingIndicator">
+          <div class="msg-avatar">
+            <img src="assets/bot-avatar.jpg" alt="Gemini Bot">
+          </div>
+          <div class="typing-bubble">
+            <div class="pulse-dot"></div>
+            <div class="pulse-dot"></div>
+            <div class="pulse-dot"></div>
+            <span class="typing-text">Gemini is thinking...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <footer class="chat-input-bar">
+        <div class="input-glass-box" id="inputGlassBox">
+          <textarea
+            id="chatTextarea"
+            class="chat-textarea"
+            placeholder="Ask Gemini anything... (Shift + Enter for new line)"
+            rows="1"
+            maxlength="10000"
+          ></textarea>
+
+          <div class="input-controls">
+            <!-- Voice Input Button (Web Speech API) -->
+            <button class="input-tool-btn" id="micBtn" title="Voice dictation (speech-to-text)" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+            </button>
+
+            <!-- Character count -->
+            <span class="char-counter" id="charCounter">0 / 10000</span>
+
+            <!-- Send Button -->
+            <button class="send-btn" id="sendBtn" title="Send message" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="input-disclaimer">
+          Gemini LLM can make mistakes. Verify important factual and coding details.
+        </div>
+      </footer>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay hidden" id="settingsModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="modal-icon-badge">⚙️</div>
+            <div>
+              <h3 class="modal-title">Settings & Configuration</h3>
+              <p class="modal-subtitle">Configure Gemini API, Supabase cloud sync, and generation settings.</p>
+            </div>
+          </div>
+          <button class="icon-btn modal-close-btn" id="closeSettingsBtn" aria-label="Close modal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Gemini API Key Section -->
+          <div class="form-group">
+            <div class="label-row">
+              <label for="apiKeyInput" class="form-label">Gemini API Key</label>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="link-external">
+                Get a Free API Key ↗
+              </a>
+            </div>
+            <div class="input-with-action">
+              <input
+                type="password"
+                id="apiKeyInput"
+                class="form-input"
+                placeholder="AIzaSy..."
+                autocomplete="off"
+              >
+              <button class="toggle-visibility-btn" id="toggleApiKeyVisBtn" type="button" title="Show/Hide Key">
+                👁️
+              </button>
+            </div>
+            <small class="form-help">
+              Saved in browser storage or configure <code>GEMINI_API_KEY</code> in <code>backend/.env</code>.
+            </small>
+            <div class="key-test-feedback hidden" id="keyTestFeedback"></div>
+          </div>
+
+          <!-- Supabase Database Section -->
+          <div class="form-group supabase-settings-box">
+            <div class="label-row">
+              <label class="form-label">⚡ Supabase Database (Cloud Sync)</label>
+              <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" class="link-external">
+                Supabase Dashboard ↗
+              </a>
+            </div>
+            <div class="input-subgroup">
+              <label for="supabaseUrlInput" class="form-sublabel">Project URL</label>
+              <input
+                type="text"
+                id="supabaseUrlInput"
+                class="form-input"
+                placeholder="https://xyz.supabase.co"
+                autocomplete="off"
+              >
+            </div>
+            <div class="input-subgroup" style="margin-top: 0.5rem;">
+              <label for="supabaseAnonKeyInput" class="form-sublabel">Anon / Public API Key</label>
+              <div class="input-with-action">
+                <input
+                  type="password"
+                  id="supabaseAnonKeyInput"
+                  class="form-input"
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5..."
+                  autocomplete="off"
+                >
+                <button class="toggle-visibility-btn" id="toggleSupabaseKeyVisBtn" type="button" title="Show/Hide Key">
+                  👁️
+                </button>
+              </div>
+            </div>
+            <small class="form-help">
+              Also loaded automatically from <code>frontend/.env</code> and <code>backend/.env</code>.
+            </small>
+            <div class="key-test-feedback hidden" id="supabaseTestFeedback"></div>
+            <button class="secondary-btn" id="testSupabaseBtn" type="button" style="margin-top: 0.5rem; width: 100%;">
+              Test Supabase Connection
+            </button>
+          </div>
+
+          <!-- Model Selection -->
+          <div class="form-group">
+            <label for="modelSelect" class="form-label">Active Gemini Model</label>
+            <select id="modelSelect" class="form-select">
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash (Latest Multimodal, Recommended)</option>
+              <option value="gemini-3.5-flash">Gemini 3.5 Flash (Fast & Highly Stable)</option>
+              <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Deep Reasoning & Complex Code)</option>
+              <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (Ultra-Low Latency)</option>
+            </select>
+          </div>
+
+          <!-- Streaming Option -->
+          <div class="form-group toggle-group">
+            <div class="toggle-info">
+              <label class="form-label">Stream Responses</label>
+              <span class="form-help">Stream tokens dynamically chunk-by-chunk in real time</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="streamingToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- Temperature Slider -->
+          <div class="form-group">
+            <div class="label-row">
+              <label for="tempSlider" class="form-label">Creativity (Temperature)</label>
+              <span class="temp-badge" id="tempValue">0.7</span>
+            </div>
+            <input type="range" id="tempSlider" class="form-range" min="0" max="1" step="0.1" value="0.7">
+            <div class="slider-ticks">
+              <span>0.0 (Precise / Code)</span>
+              <span>0.5</span>
+              <span>1.0 (Creative)</span>
+            </div>
+          </div>
+
+          <!-- Custom System Instruction -->
+          <div class="form-group">
+            <label for="customSystemPrompt" class="form-label">Custom System Instruction (Optional)</label>
+            <textarea
+              id="customSystemPrompt"
+              class="form-textarea"
+              rows="3"
+              placeholder="Override persona with custom instructions (e.g., 'You are a senior TypeScript engineer who writes concise, clean code.')."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="secondary-btn" id="testKeyBtn" type="button">Test Gemini API</button>
+          <button class="primary-btn" id="saveSettingsBtn" type="button">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+  </div>
+
+  <!-- Main JavaScript application -->
+  <script src="js/app.js"></script>
+</body>
+</html>
